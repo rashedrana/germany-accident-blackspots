@@ -1,0 +1,5 @@
+# Raw yearly Unfallatlas files (~96 MB) stay local; download them from
+# https://unfallatlas.statistikportal.de/ into data/ to reproduce prep.py.
+data/*.zip
+__pycache__/
+*.pyc
