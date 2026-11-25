@@ -1,0 +1,8 @@
+AccidentTypeCode,AccidentType
+1,Driving accident
+2,Turning off the road
+3,Turning into / crossing a road
+4,Crossing the road (pedestrian)
+5,Stationary traffic
+6,Vehicles in longitudinal traffic
+7,Other accident
