@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Germany's Accident Black Spots — Data Model</title>
+<meta name="description" content="Star-schema data model, table dictionary and data preparation behind the Germany's Accident Black Spots dashboard by Rashed Rana.">
+<style>
+:root{
+  --bg:#f7f6fa; --card:#ffffff; --ink:#1e1b26; --muted:#6d6879; --border:#e4e0ee;
+  --accent:#7c3aed; --accent2:#0078d4;
+  --shadow:0 6px 22px rgba(30,20,60,.08); --radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 20px 46px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+h1{font-size:25px;line-height:1.2}
+h1 .thin{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.links{display:flex;gap:8px;flex-wrap:wrap}
+.links a{font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--card);padding:7px 12px;border-radius:999px;color:var(--ink);text-decoration:none}
+.links a:hover{border-color:var(--accent);color:var(--accent)}
+.links a.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.panel h3{font-size:13px;letter-spacing:1.1px;color:var(--muted);margin-bottom:10px;text-transform:uppercase}
+.lead{font-size:14.5px;line-height:1.65;margin-bottom:14px}
+.lead b{color:var(--accent)}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.svgb{fill:#ffffff;stroke:#e4e0ee}
+.svgf{fill:#f1eafd;stroke:#7c3aed;stroke-width:1.5}
+.svgl{stroke:#7c3aed;stroke-width:1.3;opacity:.6}
+.svgt{fill:#1e1b26;font-weight:600}
+.svgs{fill:#6d6879}
+.svgn{fill:#7c3aed;font-weight:600}
+.caption{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.6}
+.scrollx{overflow-x:auto}
+table.dict{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+.dict th{text-align:left;font-size:11px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--border)}
+.dict td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.55}
+.dict tr:last-child td{border-bottom:none}
+.dict td.t{font-weight:700;white-space:nowrap}
+.dict td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.dict .k{color:var(--muted)}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.7px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);color:var(--muted);margin-left:8px;vertical-align:2px;text-transform:uppercase}
+.tag.fact{color:var(--accent);border-color:var(--accent)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.subbox{border:1px solid var(--border);border-radius:10px;padding:14px}
+.subbox h4{font-size:13.5px;margin-bottom:6px}
+.subbox p{font-size:13px;color:var(--muted);line-height:1.65}
+ul.clean{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7}
+ul.clean li{margin-bottom:7px}
+footer{color:var(--muted);font-size:12px;line-height:1.7;margin-top:18px}
+footer a{color:var(--accent)}
+@media (max-width:860px){ .cols{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Germany&rsquo;s Accident Black Spots <span class="thin">Data Model</span></h1>
+      <div class="sub">How the dashboard&rsquo;s Power BI model is structured, and how the data was prepared &middot; Data: Destatis Unfallatlas, 2016&ndash;2024</div>
+    </div>
+    <div class="links">
+      <a href="index.html">Dashboard</a>
+      <a href="model.html" class="on">Data Model</a>
+      <a href="https://github.com/rashedrana/germany-accident-blackspots" target="_blank" rel="noopener">GitHub Project</a>
+      <a href="https://rashedrana.github.io" target="_blank" rel="noopener">Portfolio</a>
+    </div>
+  </header>
+
+  <p class="lead">Star schema &middot; <b>6 fact tables</b> &middot; <b>8 dimensions</b> &middot; built on <b>2,098,019</b> injury accidents (Destatis Unfallatlas, 2016&ndash;2024) across <b>400 districts</b> &middot; Source: Destatis Unfallatlas open data (dl-de/by-2-0)</p>
+
+  <div class="panel">
+    <h3>Star schema</h3>
+    <svg viewBox="0 0 860 470" role="img" aria-label="Star schema diagram"><g><line class="svgl" x1="110" y1="82" x2="145" y2="225"/><line class="svgl" x1="320" y1="82" x2="430" y2="225"/><line class="svgl" x1="530" y1="82" x2="715" y2="225"/><line class="svgl" x1="740" y1="82" x2="715" y2="225"/><line class="svgl" x1="110" y1="157" x2="145" y2="225"/><line class="svgl" x1="320" y1="157" x2="145" y2="315"/><line class="svgl" x1="530" y1="157" x2="430" y2="315"/><line class="svgl" x1="740" y1="157" x2="715" y2="315"/><rect class="svgb" x="20" y="30" width="180" height="52" rx="9"/><text class="svgt" x="110.0" y="53.0" text-anchor="middle" font-size="12.5">DimKreis</text><text class="svgs" x="110.0" y="71.0" text-anchor="middle" font-size="10.5">401 rows &middot; 400 districts</text><rect class="svgb" x="230" y="30" width="180" height="52" rx="9"/><text class="svgt" x="320.0" y="53.0" text-anchor="middle" font-size="12.5">DimLand</text><text class="svgs" x="320.0" y="71.0" text-anchor="middle" font-size="10.5">16 rows &middot; the L&auml;nder</text><rect class="svgb" x="440" y="30" width="180" height="52" rx="9"/><text class="svgt" x="530.0" y="53.0" text-anchor="middle" font-size="12.5">DimSeverity</text><text class="svgs" x="530.0" y="71.0" text-anchor="middle" font-size="10.5">3 rows &middot; fatal / serious / slight</text><rect class="svgb" x="650" y="30" width="180" height="52" rx="9"/><text class="svgt" x="740.0" y="53.0" text-anchor="middle" font-size="12.5">DimAccidentType</text><text class="svgs" x="740.0" y="71.0" text-anchor="middle" font-size="10.5">7 rows &middot; UTYP1 types</text><rect class="svgb" x="20" y="105" width="180" height="52" rx="9"/><text class="svgt" x="110.0" y="128.0" text-anchor="middle" font-size="12.5">DimDate</text><text class="svgs" x="110.0" y="146.0" text-anchor="middle" font-size="10.5">108 rows &middot; year-months</text><rect class="svgb" x="230" y="105" width="180" height="52" rx="9"/><text class="svgt" x="320.0" y="128.0" text-anchor="middle" font-size="12.5">DimLight</text><text class="svgs" x="320.0" y="146.0" text-anchor="middle" font-size="10.5">3 rows &middot; daylight / twilight / dark</text><rect class="svgb" x="440" y="105" width="180" height="52" rx="9"/><text class="svgt" x="530.0" y="128.0" text-anchor="middle" font-size="12.5">DimSurface</text><text class="svgs" x="530.0" y="146.0" text-anchor="middle" font-size="10.5">3 rows &middot; dry / wet / slippery</text><rect class="svgb" x="650" y="105" width="180" height="52" rx="9"/><text class="svgt" x="740.0" y="128.0" text-anchor="middle" font-size="12.5">DimWeekday</text><text class="svgs" x="740.0" y="146.0" text-anchor="middle" font-size="10.5">7 rows &middot; Sunday&ndash;Saturday</text><rect class="svgf" x="20" y="225" width="250" height="64" rx="9"/><text class="svgt" x="145.0" y="254.0" text-anchor="middle" font-size="12.5">FactKreisYear</text><text class="svgs" x="145.0" y="272.0" text-anchor="middle" font-size="10.5">54,572 rows &middot; district &times; year</text><rect class="svgf" x="305" y="225" width="250" height="64" rx="9"/><text class="svgt" x="430.0" y="254.0" text-anchor="middle" font-size="12.5">FactMonthlyLand</text><text class="svgs" x="430.0" y="272.0" text-anchor="middle" font-size="10.5">4,517 rows &middot; Land &times; month</text><rect class="svgf" x="590" y="225" width="250" height="64" rx="9"/><text class="svgt" x="715.0" y="254.0" text-anchor="middle" font-size="12.5">FactTimePattern</text><text class="svgs" x="715.0" y="272.0" text-anchor="middle" font-size="10.5">4,525 rows &middot; weekday &times; hour</text><rect class="svgf" x="20" y="315" width="250" height="64" rx="9"/><text class="svgt" x="145.0" y="344.0" text-anchor="middle" font-size="12.5">FactConditions</text><text class="svgs" x="145.0" y="362.0" text-anchor="middle" font-size="10.5">243 rows &middot; light &times; surface</text><rect class="svgf" x="305" y="315" width="250" height="64" rx="9"/><text class="svgt" x="430.0" y="344.0" text-anchor="middle" font-size="12.5">FactInvolvement</text><text class="svgs" x="430.0" y="362.0" text-anchor="middle" font-size="10.5">50,290 rows &middot; road users</text><rect class="svgf" x="590" y="315" width="250" height="64" rx="9"/><text class="svgt" x="715.0" y="344.0" text-anchor="middle" font-size="12.5">FactInvolvementMonthly</text><text class="svgs" x="715.0" y="362.0" text-anchor="middle" font-size="10.5">1,908 rows &middot; road users &times; month</text><text class="svgn" x="118" y="158" font-size="10">1 &#8594; *</text><text class="svgn" x="360" y="158" font-size="10">1 &#8594; *</text><text class="svgn" x="620" y="158" font-size="10">1 &#8594; *</text></g></svg>
+    <div class="caption">All six facts share the conformed dimensions; DimSeverity joins every fact. The four accident facts each sum to exactly 2,098,019 accidents; the two involvement facts each sum to 3,055,312 road-user involvements (multi-counted by design &mdash; see the dictionary note).</div>
+  </div>
+
+  <div class="panel">
+    <h3>Table dictionary</h3>
+    <div class="scrollx"><table class="dict">
+      <tr><th>Table</th><th>Grain</th><th style="text-align:right">Rows</th><th>Key columns &amp; contents</th></tr>
+          <tr><td class="t">FactKreisYear<span class="tag fact">Fact</span></td><td>Kreis &times; Year &times; Severity &times; AccidentType</td><td class="n">54,572</td><td>KreisAGS, Year, SeverityCode, AccidentTypeCode <span class='k'>(FKs)</span> &middot; AccidentCount &mdash; sums to 2,098,019</td></tr>
+          <tr><td class="t">FactMonthlyLand<span class="tag fact">Fact</span></td><td>Land &times; Year &times; Month &times; Severity</td><td class="n">4,517</td><td>LandCode, Year, Month, SeverityCode <span class='k'>(FKs)</span> &middot; AccidentCount &mdash; sums to 2,098,019</td></tr>
+          <tr><td class="t">FactTimePattern<span class="tag fact">Fact</span></td><td>Year &times; Weekday &times; Hour &times; Severity</td><td class="n">4,525</td><td>Year, Weekday, Hour, SeverityCode <span class='k'>(FKs)</span> &middot; AccidentCount &mdash; sums to 2,098,019</td></tr>
+          <tr><td class="t">FactConditions<span class="tag fact">Fact</span></td><td>Year &times; Light &times; Surface &times; Severity</td><td class="n">243</td><td>Year, LightCode, SurfaceCode, SeverityCode <span class='k'>(FKs)</span> &middot; AccidentCount &mdash; sums to 2,098,019</td></tr>
+          <tr><td class="t">FactInvolvement<span class="tag fact">Fact</span></td><td>Kreis &times; Year &times; RoadUser &times; Severity</td><td class="n">50,290</td><td>KreisAGS, Year, RoadUser, SeverityCode <span class='k'>(FKs)</span> &middot; AccidentCount &mdash; sums to 3,055,312 involvements*</td></tr>
+          <tr><td class="t">FactInvolvementMonthly<span class="tag fact">Fact</span></td><td>Year &times; Month &times; RoadUser &times; Severity</td><td class="n">1,908</td><td>Year, Month, RoadUser, SeverityCode <span class='k'>(FKs)</span> &middot; AccidentCount &mdash; sums to 3,055,312 involvements*</td></tr>
+          <tr><td class="t">DimKreis<span class="tag">Dim</span></td><td>district (Kreis)</td><td class="n">401</td><td>KreisAGS <span class='k'>(PK, 5-digit official code)</span> &middot; Kreis name, Land code/name, Population2024 (Destatis Gemeindeverzeichnis, 31 Dec 2024)</td></tr>
+          <tr><td class="t">DimLand<span class="tag">Dim</span></td><td>Land</td><td class="n">16</td><td>LandCode <span class='k'>(PK)</span> &middot; the 16 L&auml;nder</td></tr>
+          <tr><td class="t">DimSeverity<span class="tag">Dim</span></td><td>severity</td><td class="n">3</td><td>SeverityCode <span class='k'>(PK)</span> &middot; 1 Fatal &middot; 2 Serious injury &middot; 3 Slight injury (worst injury in the accident, official UKATEGORIE)</td></tr>
+          <tr><td class="t">DimAccidentType<span class="tag">Dim</span></td><td>accident type</td><td class="n">7</td><td>AccidentTypeCode <span class='k'>(PK)</span> &middot; the 7 UTYP1 types (driving accident, turning off, turning into/crossing, pedestrian crossing, stationary traffic, longitudinal traffic, other)</td></tr>
+          <tr><td class="t">DimDate<span class="tag">Dim</span></td><td>year-month</td><td class="n">108</td><td>Year, Month <span class='k'>(PK)</span> &middot; YearMonth label, 2016&ndash;2024</td></tr>
+          <tr><td class="t">DimLight<span class="tag">Dim</span></td><td>light condition</td><td class="n">3</td><td>LightCode <span class='k'>(PK)</span> &middot; Daylight / Twilight / Darkness</td></tr>
+          <tr><td class="t">DimSurface<span class="tag">Dim</span></td><td>road surface</td><td class="n">3</td><td>SurfaceCode <span class='k'>(PK)</span> &middot; Dry / Wet-damp / Winter-slippery</td></tr>
+          <tr><td class="t">DimWeekday<span class="tag">Dim</span></td><td>weekday</td><td class="n">7</td><td>WeekdayCode <span class='k'>(PK)</span> &middot; source coding 1 = Sunday &hellip; 7 = Saturday</td></tr>
+    </table></div>
+    <p class="caption" style="text-align:left">* Involvement facts are multi-counted by design: one accident involving a car and a bicycle contributes one row to each road-user group. Never sum them against accident totals &mdash; use the share measures in <code>DAX_measures.md</code>.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Relationships (all single-direction, dimension &rarr; fact)</h3>
+    <ul class="clean">
+      <li>DimKreis[KreisAGS] &rarr; FactKreisYear, FactInvolvement</li>
+      <li>DimLand[LandCode] &rarr; FactKreisYear (via DimKreis), FactMonthlyLand</li>
+      <li>DimSeverity[SeverityCode] &rarr; every fact</li>
+      <li>DimAccidentType[AccidentTypeCode] &rarr; FactKreisYear</li>
+      <li>DimDate[Year] (+Month) &rarr; every fact</li>
+      <li>DimLight / DimSurface &rarr; FactConditions; DimWeekday &rarr; FactTimePattern</li>
+    </ul>
+  </div>
+
+  <div class="panel">
+    <h3>Structured &amp; unstructured data</h3>
+    <div class="cols">
+      <div class="subbox"><h4>Structured data</h4><p>Destatis Unfallatlas microdata is a fully structured statistical record &mdash; one row per injury accident with coded categorical fields (district, severity, accident type, light, surface, weekday, hour). The model keeps pre-aggregated counts of those records, so every fact sums back to the published total of 2,098,019 accidents.</p></div>
+      <div class="subbox"><h4>Unstructured data</h4><p>District boundaries (<code>kreis_geo.json</code>, 400 features) are geographic shapes for the black-spot map &mdash; not free text. The source contains no comments or documents, so no text processing was needed; every value in the model is a published count or code.</p></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>How the data was cleaned</h3>
+    <ul class="clean">
+      <li><b>Coverage caveat (kept visible everywhere):</b> 2016 covers 8 L&auml;nder only; the full 16 L&auml;nder are present from 2020. Early years are labelled wherever they appear, and the dashboard shows this caveat on the page.</li>
+      <li>The microdata itself is <b>not</b> shipped: every fact is a pre-aggregated count of accidents (<code>AccidentCount</code>), so the four accident facts sum &mdash; where the grain allows &mdash; back to exactly 2,098,019, verified from the CSVs.</li>
+      <li>Hamburg and Berlin are rolled up from the sub-district coding of the police data to <code>02000</code> / <code>11000</code>; Eisenach keeps its historical code <code>16056</code> in the model (it joined Wartburgkreis in 2021) while the map merges it.</li>
+      <li>Column-name variants across the nine yearly files were normalised, and the 2016&ndash;2017 goods-vehicle coding is documented in <code>prep.py</code> &mdash; analysts who need the microdata can rebuild from the raw yearly files in <code>data/</code> with that script.</li>
+      <li>DimKreis carries 401 rows (400 map districts + Eisenach&rsquo;s historical code); Population2024 comes from the Destatis Gemeindeverzeichnis (31 Dec 2024), municipalities aggregated to districts.</li>
+    </ul>
+  </div>
+
+  <footer>
+    Model documentation for the Power BI edition of this dashboard &mdash; the star-schema CSVs, DAX measures,
+    business questions and page layout live in the repo under <code>dashboard/powerbi/</code>.
+    Built by <strong>Rashed Rana</strong> &middot; <a href="index.html">Back to the dashboard</a>
+  </footer>
+</div>
+</body>
+</html>
